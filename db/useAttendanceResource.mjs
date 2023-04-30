@@ -2,12 +2,12 @@ import useUsersResource from "./useUsersResource.mjs"
 let useUsers = useUsersResource()
 function useAttendanceResource() {
     const arrivalTime = {
-        hour: 4,
+        hour: 8,
         minutes: 30
     };
     const departureTime = {
-        hour: 4,
-        minutes: 40
+        hour: 15,
+        minutes: 30
     };
     const resourceName = "attendance";
 
