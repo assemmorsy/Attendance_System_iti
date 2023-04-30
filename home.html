@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script type="module" src="./router/BeforePageEnterMiddleware.mjs"></script>
+
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <style>
+
+    </style>
+</head>
+
+<body>
+    <navbar-component></navbar-component>
+    <main class="container mt-3">
+        <h3 class="mb-4">Select Date Range of the Report</h3>
+        <div class="row mb-3 justify-content-evenly ">
+            <div class="col-12 col-md-5 m-2 m-md-0 p-0 px-2 px-md-0 ">
+                <div class="form-floating ">
+                    <input class="form-control" name="from_date" type="date" id="from_date" placeholder="From Date">
+                    <label for="from_date">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        From Date</label>
+                    <div id="from_date-feedback" class="invalid-feedback">Please Provide a valid From Date
+                    </div>
+                </div>
+            </div>
+            <div class=" col-12 col-md-5 m-2 m-md-0 p-0 px-2 px-md-0">
+                <div class="form-floating ">
+                    <input class="form-control" name="to_date" type="date" id="to_date" placeholder="To Date">
+                    <label for="to_date">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        To Date</label>
+                    <div id="to_date-feedback" class="invalid-feedback">Please Provide a valid To Date
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container  mt-5 text-center">
+            <table class="table w-100 table-bordered border-secondary ">
+                <thead>
+                    <tr class="fw-semibold">
+                        <td>
+                            <i class="fa-solid fa-calendar-days me-2 text-primary"></i>
+                            Date
+                        </td>
+                        <td>State</td>
+                        <td>
+                            <i class="fa-solid fa-arrow-right-to-bracket me-2 text-primary"></i>
+                            Arrive Time
+                        </td>
+                        <td>
+                            Leave Time
+                            <i class="fa-solid fa-arrow-right-from-bracket ms-2 text-primary"></i>
+                        </td>
+                    </tr>
+                </thead>
+                <tbody id="table_data">
+
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script type="module">
+        import { convertDateObjToHTMLStringFormat } from "./utils/utilities.mjs"
+        import useCurrentUserResource from "./db/useCurrentUserResource.mjs"
+        import useAttendanceResource from "./db/useAttendanceResource.mjs"
+        let useAttendance = useAttendanceResource()
+        let useCurrentUser = useCurrentUserResource()
+
+
+        let fromDateElm = document.getElementById("from_date");
+        let toDateElm = document.getElementById("to_date");
+
+        fromDateElm.value = convertDateObjToHTMLStringFormat(new Date())
+        toDateElm.value = convertDateObjToHTMLStringFormat(new Date())
+
+        let now = new Date();
+        let officialDeparture = useAttendance.createLeaveDateObj(toDateElm.value);
+
+        fromDateElm.addEventListener("change", updateUI)
+        toDateElm.addEventListener("change", updateUI)
+        addEventListener("load", updateUI);
+
+
+        let user = useCurrentUser.getCurrentUser();
+        let tbody = document.getElementById("table_data")
+
+        function updateUI(e) {
+            let data = useAttendance.getAttendanceOfEmployeeInRange(user.username, new Date(fromDateElm.value), new Date(toDateElm.value))
+            tbody.innerHTML = ""
+
+            data.attendance.forEach((elm) => {
+                let tr = document.createElement("tr")
+                tr.classList.add("border-secondary")
+                switch (elm.state) {
+                    case "absence":
+                        tr.classList.add("table-danger")
+                        break;
+                    case "presence":
+                        tr.classList.add("table-success")
+                        break;
+
+                }
+
+                tr.innerHTML =
+                    `
+                    <td>${(new Date(elm.date)).toLocaleDateString()}</td>
+                    <td>${elm.state === "presence" ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-xmark"></i>'}</td>
+                    <td>${elm.inTime === "-" ? "-" : (new Date(elm.inTime)).toLocaleTimeString()}</td>
+                    <td>${elm.outTime === "-" ?
+                        "-" :
+                        (elm.isGone || now >= officialDeparture ?
+                            (new Date(elm.outTime)).toLocaleTimeString()
+                            : "-")
+
+                    }</td>
+                    
+                    `
+                //<td>${elm.outTime === "-" ? "-" : (elm.isGone ? (new Date(elm.outTime)).toLocaleTimeString() : "-")}</td>
+
+                tbody.appendChild(tr);
+            })
+        }
+
+    </script>
+
+
+    <script type="module" src="./components/navbar.mjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

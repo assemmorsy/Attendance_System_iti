@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script type="module" src="./router/BeforePageEnterMiddleware.mjs"></script>
+
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance</title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <style>
+        main {
+            height: 80vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #alert-wrapper {
+            width: calc(90% - 2rem);
+            position: absolute;
+            top: 1rem;
+            left: 2rem;
+            z-index: 2;
+        }
+    </style>
+</head>
+
+<body>
+    <navbar-component></navbar-component>
+
+    <main class="container mt-3">
+        <div id="alert-wrapper"></div>
+        <div class="card" style="width: 80%;">
+            <div class="card-header">
+                <h2>Attendance</h2>
+            </div>
+            <div class="card-body">
+                <form novalidate name="attendance" id="attendance">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="username" name="username" placeholder="username">
+                        <label for="username">
+                            <i class="fas fa-user me-2"></i>
+                            Username</label>
+                        <div id="username-feedback" class="invalid-feedback"></div>
+                    </div>
+                    <div id="form-feedback" class="text-danger small d-none">
+
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-primary" type="submit" form="attendance">
+                    Confirm Attendance
+                </button>
+            </div>
+        </div>
+    </main>
+
+
+    <script type="module">
+        import { required } from "./validation/validationFunctions.mjs"
+        import { resetForm, addValidationHandlerToFormElementsAtEvent, ValidateFormElements, showServerSideValidation } from "./validation/validationUtils.mjs"
+        import useAttendanceResource from "./db/useAttendanceResource.mjs"
+        import { getDataFromForm, appendAlert } from "./utils/utilities.mjs"
+
+        let useAttendance = useAttendanceResource()
+        let attendanceSchema = {
+            username: [required]
+        }
+        let attendanceForm = document.forms["attendance"];
+        addValidationHandlerToFormElementsAtEvent(attendanceForm, attendanceSchema, "blur")
+        attendanceForm.addEventListener("submit", (event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            attendanceForm.classList.add("was-validated");
+            ValidateFormElements(attendanceForm, attendanceSchema)
+            if (!event.target.checkValidity()) return;
+            let user = getDataFromForm(attendanceForm);
+            try {
+                let data = useAttendance.addAttendance(user.username);
+                let msg = `
+                    ${data.firstName} ${data.lastName} 
+                    <br/> 
+                    <i class="fa-solid fa-arrow-right-to-bracket me-2 text-primary"></i> 
+                    Arrive in : ${new Date(data.inTime).toLocaleString()} 
+                    ${data.isGone ?
+                        `<br/> 
+                        <i class="fa-solid fa-arrow-right-from-bracket me-2 text-primary"></i> 
+                        Leave in : ${new Date(data.outTime).toLocaleString()}`
+                        :
+                        ``}
+                    `
+                appendAlert(msg, "success", document.getElementById("alert-wrapper"))
+                resetForm(attendanceForm);
+            } catch (err) {
+                console.error(err);
+                showServerSideValidation(err, attendanceForm);
+            }
+        })
+
+
+    </script>
+
+    <script type="module" src="./components/navbar.mjs"></script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

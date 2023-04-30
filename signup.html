@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script type="module" src="./router/BeforePageEnterMiddleware.mjs"></script>
+
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SignUp</title>
+
+
+    <link rel="stylesheet" href="./assets/css/main.css">
+
+
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class=" card text-center">
+            <div class="card-header">
+                <h3 class="display-6">
+                    <i class="fa-solid fa-circle-user fa-1x"></i>
+                    Create Account
+                </h3>
+            </div>
+            <div class="card-body">
+                <form class="container  text-start" id="registration" name="registration" novalidate>
+                    <div class="row mb-0 mb-md-3">
+                        <div class="col-12 col-md-6 mb-3 mb-md-0">
+                            <div class=" form-floating">
+                                <input class="form-control" name="firstName" type="text" id="firstName"
+                                    placeholder="First Name">
+                                <label for="firstName">
+                                    <i class="fa-solid fa-signature"></i>
+                                    First Name</label>
+                                <div id="firstName-feedback" class="invalid-feedback">
+                                    Please Provide a valid First Name
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6 mb-3 mb-md-0 ">
+                            <div class="form-floating">
+                                <input class="form-control" name="lastName" type="text" id="lastName"
+                                    placeholder="Last Name">
+                                <label for="lastName">
+                                    <i class="fa-solid fa-signature"></i>
+                                    Last Name</label>
+                                <div id="lastName-feedback" class="invalid-feedback">
+                                    Please Provide a valid Last Name
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class=" form-floating">
+                                <input class="form-control" name="address" type="text" id="address"
+                                    placeholder="Address">
+                                <label for="address">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                    Address</label>
+                                <div id="address-feedback" class="invalid-feedback">
+                                    Please Provide a valid Address
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="form-floating">
+                                <input class="form-control" name="email" type="email" id="email" placeholder="Email">
+                                <label for="email">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    Email</label>
+                                <div id="email-feedback" class="invalid-feedback">Please Provide a valid Email</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="form-floating">
+                                <input class="form-control" name="birthDay" type="date" id="birthDay"
+                                    placeholder="Birth Day">
+                                <label for="birthDay">
+                                    <i class="fa-solid fa-cake-candles"></i>
+                                    Birth Day</label>
+                                <div id="birthDay-feedback" class="invalid-feedback">Please Provide a valid Birth Day
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="form-feedback" class="text-danger small d-none">
+
+                    </div>
+                </form>
+            </div>
+
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary" form="registration">Register</button>
+            </div>
+        </div>
+    </div>
+    <p class="p-0 m-0 mt-2 text-center">Already have account ? <a class="m-0 p-0" style="cursor: pointer;"
+            href="./login.html">
+            Login</a> instead. </p>
+
+    <script type="module">
+        import { showServerSideValidation, addValidationHandlerToFormElementsAtEvent, ValidateFormElements } from "./validation/validationUtils.mjs";
+        import { required, minLength, minDate, maxDate, isEmail } from "./validation/validationFunctions.mjs";
+        import { getDataFromForm, capitalize } from "./utils/utilities.mjs"
+        import useUsersResource from "./db/useUsersResource.mjs"
+
+
+        let regForm = document.forms["registration"];
+        const useUsers = useUsersResource("users")
+
+        let userSchema = {
+            firstName: [required, minLength(3)],
+            lastName: [required, minLength(3)],
+            address: [required, minLength(5)],
+            birthDay: [required, minDate("1900-01-01"), maxDate(new Date(new Date().getFullYear() - 18, 0, 1))],
+            email: [required, isEmail],
+        };
+
+        addValidationHandlerToFormElementsAtEvent(regForm, userSchema, "blur")
+
+
+        regForm.addEventListener("submit", function (event) {
+            event.preventDefault()
+            event.stopPropagation()
+            regForm.classList.add("was-validated");
+            ValidateFormElements(regForm, userSchema)
+
+            if (!event.target.checkValidity()) return;
+            let userData = getDataFromForm(regForm);
+            userData = {
+                ...userData,
+                firstName: capitalize(userData.firstName),
+                lastName: capitalize(userData.lastName),
+            }
+            userData = {
+                ...userData,
+                username: useUsers.generateUniqueUsernameForUser(userData),
+                password: crypto.randomUUID().split("-")[0],
+                admin_confirmation: false,
+                role: "employee" // admin , employee , security_man
+            }
+
+            console.log(userData);
+
+            try {
+                useUsers.addUser(userData);
+                console.log(userData);
+                window.open("./confirmationWait.html", "_self");
+            } catch (err) {
+                console.error(err);
+                showServerSideValidation(err, regForm);
+            }
+
+        });
+
+
+    </script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

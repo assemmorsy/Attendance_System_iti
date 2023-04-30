@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script type="module" src="./router/BeforePageEnterMiddleware.mjs"></script>
+
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Reports </title>
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <style>
+
+    </style>
+</head>
+
+<body>
+    <navbar-component></navbar-component>
+
+    <main class="container mt-3">
+        <h3 class="mb-4">Select Target Date of the Report</h3>
+        <div class="row mb-3 justify-content-evenly ">
+            <div class="col-12">
+                <div class="form-floating ">
+                    <input class="form-control" name="date" type="date" id="date" placeholder="Date">
+                    <label for="date">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        Date</label>
+                    <div id="date-feedback" class="invalid-feedback">Please Provide a valid Date
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-3 justify-content-between px-5 ">
+            <div class="form-check col-auto">
+                <input class="form-check-input" type="radio" name="filter" value="all" id="all" checked>
+                <label class="form-check-label" for="all">
+                    All Employees
+                </label>
+            </div>
+
+            <div class="form-check col-auto">
+                <input class="form-check-input" type="radio" name="filter" value="absence" id="absence">
+                <label class="form-check-label" for="absence">
+                    Absence only
+                </label>
+            </div>
+
+            <div class="form-check col-auto">
+                <input class="form-check-input" type="radio" name="filter" value="presence" id="presence">
+                <label class="form-check-label" for="presence">
+                    Presence only
+                </label>
+            </div>
+
+            <div class="form-check col-auto">
+                <input class="form-check-input" type="radio" name="filter" value="late_presence" id="late_presence">
+                <label class="form-check-label" for="late_presence">
+                    Presence and Late
+                </label>
+            </div>
+        </div>
+        <div class="container  mt-3 text-center">
+            <table class="table w-100 table-bordered border-secondary ">
+                <thead>
+                    <tr class="fw-semibold">
+                        <td>
+                            <i class="fa-solid fa-user me-2 text-primary"></i>
+                            User
+                        </td>
+                        <td>State</td>
+                        <td>
+                            <i class="fa-solid fa-arrow-right-to-bracket me-2 text-primary"></i>
+                            Arrive At
+                        </td>
+                        <td>
+                            Leave At
+                            <i class="fa-solid fa-arrow-right-from-bracket ms-2 text-primary"></i>
+                        </td>
+                    </tr>
+                </thead>
+                <tbody id="table_data">
+                    <tr>
+                        <td colspan="4">
+                            No data
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script type="module">
+        import { convertDateObjToHTMLStringFormat, getValueOfRadio } from "./utils/utilities.mjs"
+        import useAttendanceResource from "./db/useAttendanceResource.mjs"
+        addEventListener("load", updateUI);
+
+        let useAttendance = useAttendanceResource()
+        let tbody = document.getElementById("table_data")
+
+        let dateElm = document.getElementById("date");
+        dateElm.addEventListener("change", updateUI)
+        dateElm.value = convertDateObjToHTMLStringFormat(new Date())
+
+        let filterElements = document.getElementsByName("filter");
+        [].forEach.call(filterElements, (elm) => {
+            elm.addEventListener("click", updateUI)
+        })
+
+        let filterSchema = {
+            "all": [],
+            "absence": [(elm) => { return elm.state === "absence" }],
+            "presence": [(elm) => { return elm.state === "presence" }],
+            "late_presence": [(elm) => { return elm.state === "presence" && new Date(elm.inTime) > useAttendance.createArriveDateObj(dateElm.value) }]
+        }
+        let now = new Date();
+        let officialDeparture = useAttendance.createLeaveDateObj(dateElm.value);
+
+        function updateUI(e) {
+            let data = useAttendance.getFullReportOfSelectedDay(new Date(dateElm.value))
+            let filterValue = getValueOfRadio("filter")
+            if (data !== -1) {
+                tbody.innerHTML = ""
+                data.forEach((elm) => {
+                    if (!filterSchema[filterValue].reduce((acc, fn) => acc && fn(elm), true)) {
+                        return;
+                    }
+                    let tr = document.createElement("tr")
+                    tr.classList.add("border-secondary")
+                    switch (elm.state) {
+                        case "absence":
+                            tr.classList.add("table-danger")
+                            break;
+                        case "presence":
+                            tr.classList.add("table-success")
+                            break;
+                    }
+                    tr.innerHTML =
+                        `
+                    <td>${elm.fullName}</td>
+                    <td>${elm.state === "presence" ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-xmark"></i>'}</td>
+                    <td>${elm.inTime === "-" ? "-" : (new Date(elm.inTime)).toLocaleTimeString()}</td>
+                    <td>${elm.outTime === "-" ?
+                            "-" :
+                            (elm.isGone || now >= officialDeparture ?
+                                (new Date(elm.outTime)).toLocaleTimeString()
+                                : "-")
+
+                        }</td>
+                `
+                    tbody.appendChild(tr);
+                })
+            }
+            else {
+                tbody.innerHTML =
+                    `
+                <tr>
+                <td colspan="4">
+                    No data
+                </td>
+                    </tr>
+                `
+            }
+
+        }
+
+    </script>
+
+
+
+
+    <script type="module" src="./components/navbar.mjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
